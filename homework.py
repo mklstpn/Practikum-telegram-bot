@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-import datetime as dt
 
 import requests
 import telegram

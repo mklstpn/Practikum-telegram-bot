@@ -72,7 +72,7 @@ def main():
                 send_message(parse_homework_status(homework))
             else:
                 logging.info(NO_HOMEWORKS)
-            time.sleep(5)
+            time.sleep(5 * 60)
 
         except Exception as error:
             logging.error(ERROR.format(error=error), exc_info=True)

@@ -13,26 +13,29 @@ PRAKTIKUM_TOKEN = os.getenv('PRAKTIKUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-BOT = telegram.Bot(token=TELEGRAM_TOKEN)
-URL = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
+bot = telegram.Bot(token=TELEGRAM_TOKEN)
+URL = 'https://prak'
 HEADERS = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
 VERDICTS = {'reviewing': 'На проверке.',
             'rejected': 'К сожалению, в работе нашлись ошибки.',
             'approved': 'Ревьюеру всё понравилось, работа зачтена!'}
 ANSWER_TEXT = 'У вас проверили работу "{name}"!\n\n{verdict}'
-BOT_START_MSG = 'Bot started'
-NO_HOMEWORKS_MSG = 'Homeworks list is empty'
-ERROR_MSG = 'Error: '
+BOT_START = 'Bot started'
+NO_HOMEWORKS = 'Homeworks list is empty'
+KEY_ERROR = 'Got undefined key from API: {status}'
+NETWORK_ERROR = 'Connection error: {error}'
+JSON_ERROR = 'Got JSON error: {json_error}'
+ERROR = 'Error: {error}'
 
 
 def parse_homework_status(homework):
-    name = homework.get('homework_name')
     status = homework.get('status')
-    try:
+    if status in VERDICTS:
         verdict = VERDICTS[status]
-    except ValueError as value_error:
-        raise ValueError(ERROR_MSG + str(value_error))
-    return ANSWER_TEXT.format(name=name, verdict=verdict)
+    if status not in VERDICTS:
+        raise KeyError(KEY_ERROR.format(status=status))
+    return ANSWER_TEXT.format(name=homework.get('homework_name'),
+                              verdict=verdict)
 
 
 def get_homeworks(current_timestamp):
@@ -41,41 +44,45 @@ def get_homeworks(current_timestamp):
         homework_get = requests.get(
             URL, headers=HEADERS, params=payload)
     except requests.exceptions.RequestException as request_error:
-        raise ConnectionError(ERROR_MSG + str(request_error))
+        raise ConnectionError(NETWORK_ERROR.format(error=request_error))
     homework_statuses = homework_get.json()
-    # Но в получаемом JSON'e ведь нет ни "code" ни "error".
-    # Или в чем-то подвох?
+    if 'code' in homework_statuses or 'error' in homework_statuses:
+        raise Exception(JSON_ERROR.format(
+            json_error=', '.join(homework_statuses.values())))
+    print(homework_statuses)
     return homework_statuses
 
 
 def send_message(message):
-    return BOT.send_message(CHAT_ID, message)
+    return bot.send_message(CHAT_ID, message)
 
 
 def main():
     current_timestamp = int(time.time())
 
-    logging.info(BOT_START_MSG)
-    logging.info(BOT)
+    logging.info(BOT_START)
+    logging.info(bot)
     while True:
         try:
             # timestamp for testing 1625764144
-            homework = get_homeworks(current_timestamp)
+            homework = get_homeworks(current_timestamp=1625764144)
             if len(homework['homeworks']) >= 1:
-                homework = homework['homeworks'][0]
                 current_timestamp = homework.get(
-                    'current_date', int(time.time()))
+                    'current_date', current_timestamp)
+                homework = homework['homeworks'][0]
                 send_message(parse_homework_status(homework))
             else:
-                logging.info(NO_HOMEWORKS_MSG)
+                logging.info(NO_HOMEWORKS)
             time.sleep(5 * 60)
 
         except Exception as error:
-            logging.error(ERROR_MSG + str(error), exc_info=True)
+            logging.error(ERROR.format(error=error), exc_info=True)
             try:
-                send_message(ERROR_MSG + str(error))
+                send_message(ERROR.format(error=error))
             except ConnectionError as connect_error:
-                logging.error(ERROR_MSG + str(connect_error))
+                logging.error(ERROR.format(error=connect_error))
+            # чтобы сообщения не валились кучей
+            time.sleep(5 * 60)
 
 
 if __name__ == '__main__':

@@ -49,7 +49,6 @@ def get_homeworks(current_timestamp):
     if 'code' in homework_statuses or 'error' in homework_statuses:
         raise Exception(JSON_ERROR.format(
             json_error=', '.join(homework_statuses.values())))
-    print(homework_statuses)
     return homework_statuses
 
 
@@ -65,7 +64,7 @@ def main():
     while True:
         try:
             # timestamp for testing 1625764144
-            homework = get_homeworks(current_timestamp=1625764144)
+            homework = get_homeworks(current_timestamp)
             if len(homework['homeworks']) >= 1:
                 current_timestamp = homework.get(
                     'current_date', current_timestamp)
@@ -73,7 +72,7 @@ def main():
                 send_message(parse_homework_status(homework))
             else:
                 logging.info(NO_HOMEWORKS)
-            time.sleep(5 * 60)
+            time.sleep(5)
 
         except Exception as error:
             logging.error(ERROR.format(error=error), exc_info=True)

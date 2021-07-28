@@ -14,7 +14,7 @@ TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
-URL = 'https://prak'
+URL = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
 VERDICTS = {'reviewing': 'На проверке.',
             'rejected': 'К сожалению, в работе нашлись ошибки.',

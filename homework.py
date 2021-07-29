@@ -22,19 +22,21 @@ VERDICTS = {'reviewing': 'На проверке.',
 ANSWER_TEXT = 'У вас проверили работу "{name}"!\n\n{verdict}'
 BOT_START = 'Bot started'
 NO_HOMEWORKS = 'Homeworks list is empty'
-KEY_ERROR = 'Got undefined key from API: {status}'
-NETWORK_ERROR = 'Connection error: {error}'
-JSON_ERROR = 'Got JSON error: {json_error}'
+KEY_ERROR = 'Got undefined status from API: {status}'
+NETWORK_ERROR = (
+    'Network error: {error}\n\nURL: {url}\nHeaders: {headers}\nDate: {date}')
+JSON_ERROR = 'Server error: {status} {json_error}'
+TELEGRAM_ERROR = 'Error while trying to send message telegram bot: '
 ERROR = 'Error: {error}'
 
 
 def parse_homework_status(homework):
-    status = homework.get('status')
-    if status in VERDICTS:
-        verdict = VERDICTS[status]
+    status = homework['status']
     if status not in VERDICTS:
-        raise KeyError(KEY_ERROR.format(status=status))
-    return ANSWER_TEXT.format(name=homework.get('homework_name'),
+        raise NameError(KEY_ERROR.format(status=status))
+    else:
+        verdict = VERDICTS[status]
+    return ANSWER_TEXT.format(name=homework['homework_name'],
                               verdict=verdict)
 
 
@@ -44,11 +46,13 @@ def get_homeworks(current_timestamp):
         homework_get = requests.get(
             URL, headers=HEADERS, params=payload)
     except requests.exceptions.RequestException as request_error:
-        raise ConnectionError(NETWORK_ERROR.format(error=request_error))
+        raise ConnectionError(NETWORK_ERROR.format(
+            error=request_error, url=URL, headers=HEADERS,
+            date=payload['from_date']))
     homework_statuses = homework_get.json()
     if 'code' in homework_statuses or 'error' in homework_statuses:
-        raise Exception(JSON_ERROR.format(
-            json_error=', '.join(homework_statuses.values())))
+        raise SystemError(JSON_ERROR.format(
+            json_error=homework_statuses['code'], status=homework_get))
     return homework_statuses
 
 
@@ -61,6 +65,7 @@ def main():
 
     logging.info(BOT_START)
     logging.info(bot)
+    bot.send_message(CHAT_ID, 'Hello')
     while True:
         try:
             # timestamp for testing 1625764144
@@ -68,8 +73,7 @@ def main():
             if len(homework['homeworks']) >= 1:
                 current_timestamp = homework.get(
                     'current_date', current_timestamp)
-                homework = homework['homeworks'][0]
-                send_message(parse_homework_status(homework))
+                send_message(parse_homework_status(homework['homeworks'][0]))
             else:
                 logging.info(NO_HOMEWORKS)
             time.sleep(5 * 60)
@@ -78,8 +82,8 @@ def main():
             logging.error(ERROR.format(error=error), exc_info=True)
             try:
                 send_message(ERROR.format(error=error))
-            except ConnectionError as connect_error:
-                logging.error(ERROR.format(error=connect_error))
+            except requests.exceptions.RequestException as connect_error:
+                logging.error(TELEGRAM_ERROR.format(error=connect_error))
             # чтобы сообщения не валились кучей
             time.sleep(5 * 60)
 

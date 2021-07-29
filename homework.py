@@ -24,9 +24,10 @@ BOT_START = 'Bot started'
 NO_HOMEWORKS = 'Homeworks list is empty'
 KEY_ERROR = 'Got undefined status from API: {status}'
 NETWORK_ERROR = (
-    'Network error: {error}\n\nURL: {url}\nHeaders: {headers}\nParams: {params}')
+    'Network error: {error}\n\nURL: {url}\nHeader: {headers}\nParams: {params}'
+)
 JSON_ERROR = (
-    'Server error: {json_error}\n\nURL: {url}\nHeaders: {headers}\nParams: {params}')
+    'Server error: {error}\n\nURL: {url}\nHeader: {headers}\nParams: {params}')
 TELEGRAM_ERROR = 'Error while trying to send message telegram bot: {error}'
 ERROR = 'Error: {error}'
 HELLO_TEXT = 'Hello'
@@ -44,8 +45,7 @@ def get_homeworks(current_timestamp):
     payload = {'from_date': current_timestamp}
     request_data = dict(url=URL, headers=HEADERS, params=payload)
     try:
-        homework_get = requests.get(
-            URL, headers=HEADERS, params=payload)
+        homework_get = requests.get(**request_data)
     except requests.exceptions.RequestException as request_error:
         raise ConnectionError(NETWORK_ERROR.format(
             error=request_error, **request_data))
@@ -54,7 +54,7 @@ def get_homeworks(current_timestamp):
     for error in error_keys:
         if error in homework_statuses:
             raise RuntimeError(JSON_ERROR.format(
-                json_error=homework_statuses[error], **request_data))
+                error=homework_statuses[error], **request_data))
     return homework_statuses
 
 

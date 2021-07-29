@@ -24,17 +24,17 @@ BOT_START = 'Bot started'
 NO_HOMEWORKS = 'Homeworks list is empty'
 KEY_ERROR = 'Got undefined status from API: {status}'
 NETWORK_ERROR = (
-    'Network error: {error}\n\nURL: {url}\nHeaders: {headers}\nDate: {date}')
-JSON_ERROR = 'Server error: {status} {json_error}'
-TELEGRAM_ERROR = 'Error while trying to send message telegram bot: '
+    'Network error: {error}\n\nURL: {url}\nHeaders: {headers}\nParams: {params}')
+JSON_ERROR = (
+    'Server error: {json_error}\n\nURL: {url}\nHeaders: {headers}\nParams: {params}')
+TELEGRAM_ERROR = 'Error while trying to send message telegram bot: {error}'
 ERROR = 'Error: {error}'
-HELLO_TEXT = 'HELLO'
+HELLO_TEXT = 'Hello'
 
 
 def parse_homework_status(homework):
     status = homework['status']
     if status not in VERDICTS:
-        # Окей, я пересмотрел все исключения. Это то самое, единственное.
         raise ValueError(KEY_ERROR.format(status=status))
     return ANSWER_TEXT.format(name=homework['homework_name'],
                               verdict=VERDICTS[status])
@@ -42,25 +42,19 @@ def parse_homework_status(homework):
 
 def get_homeworks(current_timestamp):
     payload = {'from_date': current_timestamp}
+    request_data = dict(url=URL, headers=HEADERS, params=payload)
     try:
         homework_get = requests.get(
             URL, headers=HEADERS, params=payload)
     except requests.exceptions.RequestException as request_error:
         raise ConnectionError(NETWORK_ERROR.format(
-            error=request_error, url=URL, headers=HEADERS,
-            date=payload))
+            error=request_error, **request_data))
     homework_statuses = homework_get.json()
-    if 'code' in homework_statuses or 'error' in homework_statuses:
-        raise RuntimeError(JSON_ERROR.format(
-            json_error=homework_statuses['code'], url=URL,
-            headers=HEADERS, date=payload))
-    if 'error' in homework_statuses:
-        raise RuntimeError(JSON_ERROR.format(
-            json_error=homework_statuses['error'], url=URL,
-            headers=HEADERS, date=payload))
-    if None in homework_statuses:
-        raise RuntimeError(JSON_ERROR.format(
-            json_error='None', url=URL, headers=HEADERS, date=payload))
+    error_keys = ['code', 'error']
+    for error in error_keys:
+        if error in homework_statuses:
+            raise RuntimeError(JSON_ERROR.format(
+                json_error=homework_statuses[error], **request_data))
     return homework_statuses
 
 

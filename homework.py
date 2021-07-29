@@ -28,16 +28,16 @@ NETWORK_ERROR = (
 JSON_ERROR = 'Server error: {status} {json_error}'
 TELEGRAM_ERROR = 'Error while trying to send message telegram bot: '
 ERROR = 'Error: {error}'
+HELLO_TEXT = 'HELLO'
 
 
 def parse_homework_status(homework):
     status = homework['status']
     if status not in VERDICTS:
-        raise NameError(KEY_ERROR.format(status=status))
-    else:
-        verdict = VERDICTS[status]
+        # Окей, я пересмотрел все исключения. Это то самое, единственное.
+        raise ValueError(KEY_ERROR.format(status=status))
     return ANSWER_TEXT.format(name=homework['homework_name'],
-                              verdict=verdict)
+                              verdict=VERDICTS[status])
 
 
 def get_homeworks(current_timestamp):
@@ -48,11 +48,19 @@ def get_homeworks(current_timestamp):
     except requests.exceptions.RequestException as request_error:
         raise ConnectionError(NETWORK_ERROR.format(
             error=request_error, url=URL, headers=HEADERS,
-            date=payload['from_date']))
+            date=payload))
     homework_statuses = homework_get.json()
     if 'code' in homework_statuses or 'error' in homework_statuses:
-        raise SystemError(JSON_ERROR.format(
-            json_error=homework_statuses['code'], status=homework_get))
+        raise RuntimeError(JSON_ERROR.format(
+            json_error=homework_statuses['code'], url=URL,
+            headers=HEADERS, date=payload))
+    if 'error' in homework_statuses:
+        raise RuntimeError(JSON_ERROR.format(
+            json_error=homework_statuses['error'], url=URL,
+            headers=HEADERS, date=payload))
+    if None in homework_statuses:
+        raise RuntimeError(JSON_ERROR.format(
+            json_error='None', url=URL, headers=HEADERS, date=payload))
     return homework_statuses
 
 
@@ -65,7 +73,7 @@ def main():
 
     logging.info(BOT_START)
     logging.info(bot)
-    bot.send_message(CHAT_ID, 'Hello')
+    bot.send_message(CHAT_ID, HELLO_TEXT)
     while True:
         try:
             # timestamp for testing 1625764144
@@ -82,8 +90,8 @@ def main():
             logging.error(ERROR.format(error=error), exc_info=True)
             try:
                 send_message(ERROR.format(error=error))
-            except requests.exceptions.RequestException as connect_error:
-                logging.error(TELEGRAM_ERROR.format(error=connect_error))
+            except Exception as send_error:
+                logging.error(TELEGRAM_ERROR.format(error=send_error))
             # чтобы сообщения не валились кучей
             time.sleep(5 * 60)
 

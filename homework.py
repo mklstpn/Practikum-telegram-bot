@@ -16,10 +16,10 @@ CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 bot = telegram.Bot(token=TELEGRAM_TOKEN)
 URL = 'https://praktikum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRAKTIKUM_TOKEN}'}
-VERDICTS = {'reviewing': 'На проверке.',
-            'rejected': 'К сожалению, в работе нашлись ошибки.',
-            'approved': 'Ревьюеру всё понравилось, работа зачтена!'}
-ANSWER_TEXT = 'У вас проверили работу "{name}"!\n\n{verdict}'
+VERDICTS = {'reviewing': 'On review.',
+            'rejected': 'Rejected.',
+            'approved': 'All Ok, approved!'}
+ANSWER_TEXT = '"{name}" status changed: {verdict}'
 BOT_START = 'Bot started'
 NO_HOMEWORKS = 'Homeworks list is empty'
 KEY_ERROR = 'Got undefined status from API: {status}'
@@ -70,7 +70,6 @@ def main():
     bot.send_message(CHAT_ID, HELLO_TEXT)
     while True:
         try:
-            # timestamp for testing 1625764144
             homework = get_homeworks(current_timestamp)
             if len(homework['homeworks']) >= 1:
                 current_timestamp = homework.get(
@@ -86,7 +85,6 @@ def main():
                 send_message(ERROR.format(error=error))
             except Exception as send_error:
                 logging.error(TELEGRAM_ERROR.format(error=send_error))
-            # чтобы сообщения не валились кучей
             time.sleep(5 * 60)
 
 

@@ -1,2 +1,3 @@
-# api_sp1_bot
-api sp1 bot
+# Practikum telegram bot
+
+#### This bot simply checking is verified homework or not =)
